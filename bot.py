@@ -31,7 +31,7 @@ conn.commit()
 menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🟢 Ishni boshlash")],
-        [KeyboardButton(text="⏸ Dam"), KeyboardButton(text=▶️ Davom")],
+        [KeyboardButton(text="⏸ Dam"), KeyboardButton(text="▶️ Davom")],
         [KeyboardButton(text="🔴 Tugatish")],
         [KeyboardButton(text="📊 Hisobot")]
     ],
