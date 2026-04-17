@@ -5,7 +5,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import asyncio
 
 TOKEN = "8691690312:AAHxKA8Vb10Lv5228PrGMS7YoDUvXxvNY0Q"
-ADMIN_ID = 123456789  # o'z iding
+ADMIN_ID = 123456789 
 
 DEFAULT_RATE = 20428
 
