@@ -1,4 +1,3 @@
-Amir, [17.04.2026 20:59]
 import sqlite3
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
