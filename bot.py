@@ -132,12 +132,6 @@ async def handler(msg: types.Message):
         hours = total / 3600
         salary = int(hours * RATE)
 
-await msg.answer(f"⏱ {hours:.2f} soat\n💰 {salary:,} so‘m")
+        await msg.answer(f"⏱ {hours:.2f} soat\n💰 {salary:,} so‘m")
 
         user_state[user_id] = None
-
-async def main():
-    asyncio.create_task(auto_close())
-    await dp.start_polling(bot)
-
-asyncio.run(main())
