@@ -70,10 +70,6 @@ async def auto_close():
 async def handler(msg: types.Message):
     user_id = msg.from_user.id
 
-    if user_id != ADMIN_ID:
-        await msg.answer("⛔ Ruxsat yo‘q / Доступ запрещён")
-        return
-
     text = msg.text
 
     # 🔰 START
