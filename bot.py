@@ -133,8 +133,7 @@ async def handler(msg: types.Message):
         salary = int(hours * RATE)
 
 await msg.answer(f"⏱ {hours:.2f} soat\n💰 {salary:,} so‘m")
-
-        user_state[user_id] = None
+    user_state[user_id] = None
 
 async def main():
     asyncio.create_task(auto_close())
