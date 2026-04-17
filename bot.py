@@ -132,7 +132,6 @@ async def handler(msg: types.Message):
         hours = total / 3600
         salary = int(hours * RATE)
 
-Amir, [17.04.2026 20:59]
 await msg.answer(f"⏱ {hours:.2f} soat\n💰 {salary:,} so‘m")
 
         user_state[user_id] = None
