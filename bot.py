@@ -128,8 +128,12 @@ async def handler(msg: types.Message):
 
     # ✏️ RATE O‘ZGARTIRISH
     elif text == "✏️ O‘zgartirish / Изменить":
-        user_state[user_id] = "rate"
-        await msg.answer("💰 Yangi soat narxini kiriting:")
+    user_state[user_id] = "edit_time"
+    await msg.answer(
+        "🕐 Necha vaqtda ish boshlagan edingiz?\n\n"
+        "Masalan:\n"
+        "09:00"
+    )
 
     elif user_state.get(user_id) == "rate":
         new_rate = int(text)
@@ -141,6 +145,37 @@ async def handler(msg: types.Message):
         user_state[user_id] = None
 
         await msg.answer(f"✅ Yangilandi\n💰 {new_rate:,} so‘m")
+    elif user_state.get(user_id) == "edit_time":
+    try:
+        time_input = text.strip()
+        hour, minute = map(int, time_input.split(":"))
+
+        now = datetime.now()
+        new_start = now.replace(hour=hour, minute=minute, second=0)
+
+        # oxirgi ochiq sessionni topamiz
+        cursor.execute("""
+            SELECT id FROM sessions 
+            WHERE user_id=? AND end IS NULL 
+            ORDER BY id DESC LIMIT 1
+        """, (user_id,))
+        row = cursor.fetchone()
+
+        if row:
+            cursor.execute(
+                "UPDATE sessions SET start=? WHERE id=?",
+                (new_start.isoformat(), row[0])
+            )
+            conn.commit()
+
+            await msg.answer(f"✅ Boshlanish vaqti {time_input} ga o‘zgartirildi")
+        else:
+            await msg.answer("❌ Aktiv ish topilmadi. Avval 'Boshlash' bosing.")
+
+        user_state[user_id] = None
+
+    except:
+        await msg.answer("❌ Format noto‘g‘ri\nMasalan: 09:00")
 
 async def main():
     asyncio.create_task(auto_close())
