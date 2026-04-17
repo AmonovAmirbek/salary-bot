@@ -69,7 +69,6 @@ async def auto_close():
 @dp.message()
 async def handler(msg: types.Message):
     user_id = msg.from_user.id
-
     text = msg.text
 
     # 🔰 START
