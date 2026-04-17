@@ -1,17 +1,19 @@
 import sqlite3
-from datetime import datetime, timedelta
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import asyncio
+from datetime import datetime, timedelta
 
-TOKEN = "8691690312:AAHxKA8Vb10Lv5228PrGMS7YoDUvXxvNY0Q"
-ADMIN_ID = 123456789 
+from aiogram import Bot, Dispatcher
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+
+TOKEN = "8691690312:AAG-7JrXB9uskV0RnYVYdtDgzyesyK1H1sw"
+ADMIN_ID = 123456789
 
 DEFAULT_RATE = 20428
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# DATABASE
 conn = sqlite3.connect("work.db")
 cursor = conn.cursor()
 
@@ -26,31 +28,32 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS settings (
-    user_id INTEGER,
+    user_id INTEGER PRIMARY KEY,
     rate INTEGER
 )
 """)
 
 conn.commit()
 
-# 🔥 TUGMALAR
+# MENU
 menu = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🟢 Boshlash / Начать")],
-        [KeyboardButton(text="💰 Mening balansim / Мой баланс")],
-        [KeyboardButton(text="✏️ O‘zgartirish / Изменить")]
+        [KeyboardButton(text="🟢 Boshlash")],
+        [KeyboardButton(text="💰 Balans")],
+        [KeyboardButton(text="💵 Soat narxi")]
     ],
     resize_keyboard=True
 )
 
 user_state = {}
 
-def get_rate(user_id):
+def get_rate(user_id: int):
     cursor.execute("SELECT rate FROM settings WHERE user_id=?", (user_id,))
     row = cursor.fetchone()
     return row[0] if row else DEFAULT_RATE
 
-# 🌙 00:00 AUTO CLOSE
+
+# 🌙 AUTO CLOSE (00:00)
 async def auto_close():
     while True:
         now = datetime.now()
@@ -60,125 +63,83 @@ async def auto_close():
         cursor.execute("SELECT id FROM sessions WHERE end IS NULL")
         rows = cursor.fetchall()
 
-        for row in rows:
-            end_time = next_midnight - timedelta(seconds=1)
-            cursor.execute("UPDATE sessions SET end=? WHERE id=?", (end_time.isoformat(), row[0]))
+        for (sid,) in rows:
+            cursor.execute(
+                "UPDATE sessions SET end=? WHERE id=?",
+                (next_midnight.isoformat(), sid)
+            )
 
         conn.commit()
 
+
+# HANDLER
 @dp.message()
-async def handler(msg: types.Message):
+async def handler(msg: Message):
     user_id = msg.from_user.id
     text = msg.text
 
-    # 🔰 START
+    # START
     if text == "/start":
-        await msg.answer(
-            "━━━━━━━━━━━━━━━\n"
-            "💼 *S H I F T P A Y*\n"
-            "━━━━━━━━━━━━━━━\n\n"
-            "⏱ Ish vaqtingiz avtomatik hisoblanadi\n"
-            "🌙 00:00 da yopiladi\n"
-            "💰 Maoshingizni real vaqtda ko‘rasiz\n\n"
-            "👇 Tugmani bosing",
-            parse_mode="Markdown",
-            reply_markup=menu
-        )
+        await msg.answer("Ish botga xush kelibsiz", reply_markup=menu)
 
-    # 🟢 BOSHLASH
-    elif text == "🟢 Boshlash / Начать":
+    # BOSHLASH
+    elif text == "🟢 Boshlash":
         now = datetime.now().isoformat()
-        cursor.execute("INSERT INTO sessions (user_id, start) VALUES (?, ?)", (user_id, now))
+        cursor.execute(
+            "INSERT INTO sessions (user_id, start, end) VALUES (?, ?, NULL)",
+            (user_id, now)
+        )
         conn.commit()
+        await msg.answer("Ish boshlandi")
 
-        await msg.answer("🚀 Ish boshlandi / Работа началась")
-
-    # 💰 BALANS
-    elif text == "💰 Mening balansim / Мой баланс":
+    # BALANS
+    elif text == "💰 Balans":
         cursor.execute("SELECT start, end FROM sessions WHERE user_id=?", (user_id,))
         rows = cursor.fetchall()
 
-        total_seconds = 0
+        total = 0
 
         for start, end in rows:
             start = datetime.fromisoformat(start)
             end = datetime.fromisoformat(end) if end else datetime.now()
 
-            midnight = start.replace(hour=23, minute=59, second=59)
-            if end > midnight:
-                end = midnight
+            total += (end - start).total_seconds()
 
-            total_seconds += (end - start).total_seconds()
-
-        hours = total_seconds / 3600
+        hours = total / 3600
         rate = get_rate(user_id)
         salary = int(hours * rate)
 
         await msg.answer(
-            "━━━━━━━━━━━━━━━\n"
-            "💰  *M E N I N G   B A L A N S I M*\n"
-            "━━━━━━━━━━━━━━━\n\n"
-            f"⏱ Ish vaqti: *{hours:.2f} soat*\n"
-            f"💵 Soat narxi: *{rate:,} so‘m*\n"
-            f"💰 Jami: *{salary:,} so‘m*\n\n"
-            "━━━━━━━━━━━━━━━\n"
-            "🔥 Zo‘r ishlayapsiz!",
-            parse_mode="Markdown"
+            f"⏱ Soat: {hours:.2f}\n"
+            f"💵 Stavka: {rate}\n"
+            f"💰 Maosh: {salary}"
         )
 
-    # ✏️ RATE O‘ZGARTIRISH
-    elif text == "✏️ O‘zgartirish / Изменить":
-    user_state[user_id] = "edit_time"
-    await msg.answer(
-        "🕐 Necha vaqtda ish boshlagan edingiz?\n\n"
-        "Masalan:\n"
-        "09:00"
-    )
+    # SOAT NARXI BOSHLASH
+    elif text == "💵 Soat narxi":
+        user_state[user_id] = "rate"
+        await msg.answer("Yangi soat narxini kiriting:")
 
+    # SOAT NARXI SAQLASH
     elif user_state.get(user_id) == "rate":
-        new_rate = int(text)
+        try:
+            rate = int(text)
 
-        cursor.execute("DELETE FROM settings WHERE user_id=?", (user_id,))
-        cursor.execute("INSERT INTO settings VALUES (?, ?)", (user_id, new_rate))
-        conn.commit()
-
-        user_state[user_id] = None
-
-        await msg.answer(f"✅ Yangilandi\n💰 {new_rate:,} so‘m")
-    elif user_state.get(user_id) == "edit_time":
-    try:
-        time_input = text.strip()
-        hour, minute = map(int, time_input.split(":"))
-
-        now = datetime.now()
-        new_start = now.replace(hour=hour, minute=minute, second=0)
-
-        # oxirgi ochiq sessionni topamiz
-        cursor.execute("""
-            SELECT id FROM sessions 
-            WHERE user_id=? AND end IS NULL 
-            ORDER BY id DESC LIMIT 1
-        """, (user_id,))
-        row = cursor.fetchone()
-
-        if row:
-            cursor.execute(
-                "UPDATE sessions SET start=? WHERE id=?",
-                (new_start.isoformat(), row[0])
-            )
+            cursor.execute("INSERT OR REPLACE INTO settings (user_id, rate) VALUES (?, ?)",
+                           (user_id, rate))
             conn.commit()
 
-            await msg.answer(f"✅ Boshlanish vaqti {time_input} ga o‘zgartirildi")
-        else:
-            await msg.answer("❌ Aktiv ish topilmadi. Avval 'Boshlash' bosing.")
+            user_state[user_id] = None
+            await msg.answer(f"Yangi narx: {rate}")
 
-        user_state[user_id] = None
+        except:
+            await msg.answer("Faqat raqam kiriting!")
 
-    except:
-        await msg.answer("❌ Format noto‘g‘ri\nMasalan: 09:00")
 
 async def main():
     asyncio.create_task(auto_close())
     await dp.start_polling(bot)
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())
